@@ -71,7 +71,7 @@ people:
   person.sam:
     todo: todo.sam_s_list
 show: [calendar, todo]          # or just one part
-calendar_media: "(min-width: 768px)"   # optional: only show the calendar part on this screen size
+calendar_media: "(min-width: 768px)"   # optional: only show birthdays and the calendar on this screen size
 calendar_card:                  # passed straight to calendar-card-pro
   compact_events_to_show: 3
 ```

@@ -902,7 +902,7 @@ window.customCards=window.customCards || [];window.customCards.push({type:'perso
       if (!profile && !c.show_to_everyone) return [];
       const parts = c.show || ['birthdays', 'calendar', 'todo'];
       const out = [];
-      if (parts.includes('birthdays') && customElements.get('personal-birthday-card'))
+      if (parts.includes('birthdays') && (!this._media || this._media.matches) && customElements.get('personal-birthday-card'))
         out.push({type: 'custom:personal-birthday-card', ...(c.birthday_card || {})});
       if (parts.includes('calendar') && (!this._media || this._media.matches)) {
         const seen = new Set(), entities = [];
@@ -984,7 +984,7 @@ window.customCards=window.customCards || [];window.customCards.push({type:'perso
           {name: 'calendar_media', selector: {text: {}}}
         ],
         {title: c.title || '', show: c.show || ['birthdays', 'calendar', 'todo'], hide_empty_todo: c.hide_empty_todo !== false, show_to_everyone: !!c.show_to_everyone, auto_todo: c.auto_todo !== false, calendar_media: c.calendar_media || ''},
-        {title: 'Title', show: 'Show', hide_empty_todo: 'Hide a to-do list while it has no open items', show_to_everyone: 'Show shared calendars to people without a profile (guests)', auto_todo: 'Find each person’s “<Name>’s list” automatically', calendar_media: 'Only show the calendar on this screen size (CSS media query, optional)'},
+        {title: 'Title', show: 'Show', hide_empty_todo: 'Hide a to-do list while it has no open items', show_to_everyone: 'Show shared calendars to people without a profile (guests)', auto_todo: 'Find each person’s “<Name>’s list” automatically', calendar_media: 'Only show birthdays and the calendar on this screen size (CSS media query, optional)'},
         v => {
           const n = {...this._config};
           n.title = v.title || undefined; if (!n.title) delete n.title;
