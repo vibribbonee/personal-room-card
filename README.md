@@ -2,13 +2,14 @@
 
 Dashboard cards that follow the person who is signed in, instead of showing a fixed room.
 
-One file adds four cards:
+One file adds five cards:
 
 | Card | What it shows |
 |------|---------------|
 | `custom:personal-room-card` | The room you're in right now: its lights, climate and media, readings (temperature, humidity, CO₂, open windows) and suggestions that fit the time of day. |
 | `custom:personal-shortcuts-card` | Shortcuts for the current room, learned from what you tap most. |
 | `custom:personal-status-pills` | Your devices at a glance: phone, laptop and watch battery, charging and your next alarm. |
+| `custom:personal-agenda-card` | Your calendars and to-do list: shared calendars plus your own, from one config instead of a conditional card per person. |
 | `custom:personal-commute-card` | When to leave for your train, built from Home Assistant's Nederlandse Spoorwegen sensors. |
 
 Nothing is hardcoded. Each card finds "you" from the `person` linked to the signed-in Home Assistant user, so the same dashboard works for everyone in the house.
@@ -44,6 +45,31 @@ What counts as running: lights and fans that are on, media that is on or playing
 | `show_all_off` | `true` | The All off button |
 | `still_on_limit` | `8` | Tiles shown before "…and N more" |
 | `still_on_exclude` | `[]` | Entities to never list |
+
+## Personal agenda
+
+List the calendars everyone shares once, then each person's own calendars and to-do list. The card shows the signed-in person's combined agenda, and their to-do list only while it has open items.
+
+```yaml
+type: custom:personal-agenda-card
+title: Upcoming
+calendars:                      # shared: everyone with a profile sees these
+  - {entity: calendar.holidays, label: "📅", accent_color: green}
+  - {entity: calendar.family, label: "👪", accent_color: blue}
+people:
+  person.alex:
+    calendars:
+      - {entity: calendar.alex_work, label: "💼", accent_color: red}
+    todo: todo.alex_s_list
+  person.sam:
+    todo: todo.sam_s_list
+show: [calendar, todo]          # or just one part
+calendar_media: "(min-width: 768px)"   # optional: only show the calendar part on this screen size
+calendar_card:                  # passed straight to calendar-card-pro
+  compact_events_to_show: 3
+```
+
+Calendar entries take [Calendar Card Pro](https://github.com/alexpfau/calendar-card-pro) options (`label`, `accent_color`, …). Without Calendar Card Pro installed, it falls back to Home Assistant's built-in calendar card. People without a profile (a guest login, a kiosk) see nothing unless you set `show_to_everyone: true`, in which case they get the shared calendars. Set `hide_empty_todo: false` to always show the to-do list.
 
 ## Install
 
