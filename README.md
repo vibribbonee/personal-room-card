@@ -21,7 +21,11 @@ The room comes from [Bermuda](https://github.com/agittins/bermuda) Bluetooth tra
 - the last room is kept for `room_loss_grace` seconds (default 90) when tracking drops out;
 - the card won't switch while you're tapping it (`interaction_hold`, default 20 s).
 
-Two devices placed in different rooms count as "unsure", not as a vote. You can always pick a room by hand; that choice is stored in the browser only, never in Home Assistant.
+Two devices placed in different rooms count as "unsure", not as a vote.
+
+## When you're away
+
+When your `person` is away, the room card shows your `fallback_area` plus a **Still on at home** list: lights, fans, media players and climate that are still running, as tiles you can tap to switch off. When nothing is running it says *Everything's off at home*. Set `show_still_on: false` to hide it, or `still_on_limit` (default 8) to change how many it lists. Light groups are skipped so a whole-house group doesn't repeat its members. You can always pick a room by hand; that choice is stored in the browser only, never in Home Assistant.
 
 ## Install
 

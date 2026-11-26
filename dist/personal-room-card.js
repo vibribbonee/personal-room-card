@@ -118,6 +118,17 @@
       const h = this._hass;
       return Object.values(h.entities || {}).filter(e => (e.area_id || h.devices?.[e.device_id]?.area_id) === area && !e.hidden && !e.entity_category && CONTROL_DOMAINS.has(e.entity_id.split('.')[0]) && h.states[e.entity_id]).sort((a,b) => a.entity_id.localeCompare(b.entity_id));
     }
+    // Lights, fans, media and climate that are still running, for the away view.
+    // Groups are skipped so a whole-house light group doesn't repeat its members.
+    _stillOn() {
+      const h=this._hass, limit=Math.max(1,Number(this._config.still_on_limit) || 8);
+      const running=s=>{const d=s.entity_id.split('.')[0];return d==='media_player'?['on','playing','paused','buffering'].includes(s.state):d==='climate'?!['off',...BAD].includes(s.state):s.state==='on';};
+      return Object.values(h.entities || {})
+        .filter(e=>['light','fan','media_player','climate'].includes(e.entity_id.split('.')[0]) && !e.hidden && !e.entity_category)
+        .map(e=>h.states[e.entity_id]).filter(s=>s && running(s) && !Array.isArray(s.attributes.entity_id))
+        .sort((a,b)=>(a.attributes.friendly_name || a.entity_id).localeCompare(b.attributes.friendly_name || b.entity_id))
+        .slice(0,limit).map(s=>s.entity_id);
+    }
     _rooms() {
       const configured = this._config.rooms || {};
       return Object.values(this._hass.areas || {}).filter(a => configured[a.area_id] || this._areaEntities(a.area_id).length).sort((a,b) => a.name.localeCompare(b.name));
@@ -327,7 +338,7 @@
       this._pin.disabled=!room; this._pin.textContent=this._manual?'Pinned':'Pin';this._pin.setAttribute('aria-pressed',String(!!this._manual));
       const displayName=person?.attributes.friendly_name || h.user?.name || 'Home';
       this._title.textContent = name || `Hello, ${displayName}`;
-      this._sub.textContent = `${displayName}${usingFallback?resolved.away?' · Away · default controls':' · Default controls · location not confirmed':this._config.fixed_area?' · Room for this display':manual?' · Pinned on this device':''}`;
+      this._sub.textContent = `${displayName}${usingFallback?resolved.away?' · Away from home':' · Room not detected yet':this._config.fixed_area?' · Room for this display':manual?' · Pinned on this device':''}`;
       const listKey=rooms.map(a=>a.area_id+':'+a.name).join('|');
       if (listKey !== this._listKey) {
         this._listKey=listKey; this._select.replaceChildren(); const opt=el('option','Choose a room');opt.value='';this._select.append(opt);
@@ -357,6 +368,12 @@
       if(this._config.hide_unavailable)cards=cards.filter(c=>!c.entity || stateOK(h.states[c.entity]));
       const groupTitle=usingFallback?this._config.fallback_title:configured?.title;
       if(groupTitle)cards=[{type:'heading',heading:groupTitle,heading_style:'subtitle'},...cards];
+      if(usingFallback && resolved.away && this._config.show_still_on!==false) {
+        const stillOn=this._stillOn();
+        cards=stillOn.length
+          ? [{type:'heading',heading:'Still on at home',heading_style:'subtitle',icon:'mdi:home-lightning-bolt-outline'},...stillOn.map(entity=>({type:'tile',entity,grid_options:{columns:6}})),...cards]
+          : [{type:'heading',heading:"Everything's off at home",heading_style:'subtitle',icon:'mdi:home-check-outline'},...cards];
+      }
       const readings = usingFallback ? null : roomReadingsCard(configured?.readings);
       if(readings) cards = [readings,...cards];
       if(shortcutsOnly)cards=[];
