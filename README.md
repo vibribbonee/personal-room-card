@@ -2,7 +2,7 @@
 
 Dashboard cards that follow the person who is signed in, instead of showing a fixed room.
 
-One file adds five cards:
+One file adds six cards:
 
 | Card | What it shows |
 |------|---------------|
@@ -10,6 +10,7 @@ One file adds five cards:
 | `custom:personal-shortcuts-card` | Shortcuts for the current room, learned from what you tap most. |
 | `custom:personal-status-pills` | Your devices at a glance: phone, laptop and watch battery, charging and your next alarm. |
 | `custom:personal-agenda-card` | Your calendars and to-do list: shared calendars plus your own, from one config instead of a conditional card per person. |
+| `custom:personal-birthday-card` | Upcoming birthdays of the people you live with, in their own pronouns: *"It's Edo's birthday today 🎂 He turns 26. Wish him a happy birthday!"* |
 | `custom:personal-commute-card` | When to leave for your train, built from Home Assistant's Nederlandse Spoorwegen sensors. |
 
 Nothing is hardcoded. Each card finds "you" from the `person` linked to the signed-in Home Assistant user, so the same dashboard works for everyone in the house.
@@ -80,6 +81,28 @@ Each person's own to-do list is found automatically when it's called *"<Name>'s 
 Everything above can be set from the card's visual editor: the shared calendars and lists, and a block per person for their own calendars and to-do list. Labels and colours you set in YAML are kept when you change calendars in the editor.
 
 Calendar entries take [Calendar Card Pro](https://github.com/alexpfau/calendar-card-pro) options (`label`, `accent_color`, …). Without Calendar Card Pro installed, it falls back to Home Assistant's built-in calendar card. People without a profile (a guest login, a kiosk) see nothing unless you set `show_to_everyone: true`, in which case they get the shared calendars. Set `hide_empty_todo: false` to always show the to-do list.
+
+## Birthdays
+
+`custom:personal-birthday-card` reads two attributes from each `person`:
+
+- `birthday`: day-month with an optional year, e.g. `16-02-2001` or `06-04` (ISO `2001-02-16` works too; set `date_order: MDY` for month-first dates).
+- pronouns: `pronoun1`/`pronoun2`/`pronoun3` (subject/object/possessive, e.g. `he`/`him`/`his`) or a single `pronouns: they/them`.
+
+It shows birthdays coming up within `days_ahead` (default 14): *today*, *tomorrow*, or the date, with the age when a year is known. Pronouns pick the right words (*they turn*, *he turns*, *wish them*). Someone without pronouns is referred to by name; the card never guesses. On your own birthday it greets you instead (`show_own: false` to turn that off), and it hides when nothing is coming up.
+
+People without a login can be added:
+
+```yaml
+type: custom:personal-birthday-card
+days_ahead: 21
+extra:
+  - {name: Grandma, birthday: 03-05, pronouns: she/her}
+```
+
+The agenda card shows it on top of the calendar (part `birthdays`); `birthday_card:` passes options through.
+
+Person attributes like these can be added with Home Assistant's `homeassistant: customize:` in `configuration.yaml`.
 
 ## Install
 

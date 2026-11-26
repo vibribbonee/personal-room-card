@@ -45,8 +45,10 @@
       if (profile && !profile.todo && ownList) profile = {...profile, todo: ownList};
       // People without a profile see nothing unless show_to_everyone is set (guests, kiosks).
       if (!profile && !c.show_to_everyone) return [];
-      const parts = c.show || ['calendar', 'todo'];
+      const parts = c.show || ['birthdays', 'calendar', 'todo'];
       const out = [];
+      if (parts.includes('birthdays') && customElements.get('personal-birthday-card'))
+        out.push({type: 'custom:personal-birthday-card', ...(c.birthday_card || {})});
       if (parts.includes('calendar') && (!this._media || this._media.matches)) {
         const seen = new Set(), entities = [];
         for (const cal of [...toList(c.calendars), ...toList(profile?.calendars)]) if (!seen.has(cal.entity) && h.states[cal.entity]) { seen.add(cal.entity); entities.push(cal); }
@@ -120,19 +122,19 @@
       root.append(this._form(
         [
           {name: 'title', selector: {text: {}}},
-          {name: 'show', selector: {select: {multiple: true, options: [{value: 'calendar', label: 'Calendar'}, {value: 'todo', label: 'To-do list'}]}}},
+          {name: 'show', selector: {select: {multiple: true, options: [{value: 'birthdays', label: 'Household birthdays'}, {value: 'calendar', label: 'Calendar'}, {value: 'todo', label: 'To-do list'}]}}},
           {name: 'hide_empty_todo', selector: {boolean: {}}},
           {name: 'show_to_everyone', selector: {boolean: {}}},
           {name: 'auto_todo', selector: {boolean: {}}},
           {name: 'calendar_media', selector: {text: {}}}
         ],
-        {title: c.title || '', show: c.show || ['calendar', 'todo'], hide_empty_todo: c.hide_empty_todo !== false, show_to_everyone: !!c.show_to_everyone, auto_todo: c.auto_todo !== false, calendar_media: c.calendar_media || ''},
+        {title: c.title || '', show: c.show || ['birthdays', 'calendar', 'todo'], hide_empty_todo: c.hide_empty_todo !== false, show_to_everyone: !!c.show_to_everyone, auto_todo: c.auto_todo !== false, calendar_media: c.calendar_media || ''},
         {title: 'Title', show: 'Show', hide_empty_todo: 'Hide a to-do list while it has no open items', show_to_everyone: 'Show shared calendars to people without a profile (guests)', auto_todo: 'Find each person’s “<Name>’s list” automatically', calendar_media: 'Only show the calendar on this screen size (CSS media query, optional)'},
         v => {
           const n = {...this._config};
           n.title = v.title || undefined; if (!n.title) delete n.title;
           const show = (v.show || []).filter(Boolean);
-          if (show.length && show.length < 2) n.show = show; else delete n.show;
+          if (show.length && show.length < 3) n.show = show; else delete n.show;
           if (v.hide_empty_todo === false) n.hide_empty_todo = false; else delete n.hide_empty_todo;
           if (v.show_to_everyone) n.show_to_everyone = true; else delete n.show_to_everyone;
           if (v.auto_todo === false) n.auto_todo = false; else delete n.auto_todo;
