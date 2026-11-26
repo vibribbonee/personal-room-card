@@ -42,7 +42,9 @@ show_room_picker: false
 fallback_area: bedroom      # shown when you're away or no room is detected
 rooms:
   bedroom:
-    cards: []               # extra cards for this room, optional
+    readings:
+      window: binary_sensor.bedroom_window   # shown as a chip while open
+    shortcuts: []           # pinned shortcuts for this room, optional
 ```
 
 All options can be set from the visual editor.
