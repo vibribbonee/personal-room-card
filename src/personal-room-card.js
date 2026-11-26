@@ -134,6 +134,16 @@
         });
     }
     _names(list) { const n=list.map(p=>p.name); return n.length<3 ? n.join(' and ') : `${n.slice(0,-1).join(', ')} and ${n.at(-1)}`; }
+    // One shortcut per room that has controls, with how many things are running there.
+    _roomLinks() {
+      const h=this._hass, running=new Set(this._stillOn());
+      const areaOf=id=>{const e=h.entities?.[id];return e?.area_id || h.devices?.[e?.device_id]?.area_id;};
+      return this._rooms().filter(a=>this._areaEntities(a.area_id).length).map(a=>{
+        const on=[...running].filter(id=>areaOf(id)===a.area_id).length;
+        const path=this._config.rooms?.[a.area_id]?.path || this._config.rooms_path || '/lovelace/rooms';
+        return {type:'shortcut',label:`${a.name}${on?` · ${on} on`:''}`,icon:a.icon || 'mdi:door-open',tap_action:{action:'navigate',navigation_path:path}};
+      });
+    }
     // Lights, fans, media and climate that are still running, for the away view.
     // Groups are skipped so a whole-house light group doesn't repeat its members.
     _stillOn() {
@@ -358,7 +368,9 @@
       this._currentRoom=room;
       this._pin.disabled=!room; this._pin.textContent=this._manual?'Pinned':'Pin';this._pin.setAttribute('aria-pressed',String(!!this._manual));
       const displayName=person?.attributes.friendly_name || h.user?.name || 'Home';
-      this._title.textContent = name || `Hello, ${displayName}`;
+      const awayView=usingFallback && resolved.away;
+      this.shadowRoot.querySelector('.eyebrow').textContent=awayView?'Away':usingFallback?'Your space · probably':'Your space';
+      this._title.textContent = awayView ? (this._config.away_title || h.config?.location_name || 'Home') : name || `Hello, ${displayName}`;
       const household=this._config.show_household===false ? [] : this._household(person);
       const othersHome=household.filter(p=>p.home);
       let company='';
@@ -366,7 +378,7 @@
         const here=othersHome.filter(p=>p.room && p.room===name), elsewhere=othersHome.filter(p=>!(p.room && p.room===name));
         company=[here.length?`${this._names(here)} here too`:'',elsewhere.length?elsewhere.map(p=>p.room?`${p.name} in ${p.room}`:`${p.name} home`).join(', '):''].filter(Boolean).join(' · ');
       }
-      this._sub.textContent = `${displayName}${usingFallback?resolved.away?' · Away from home':' · Room not detected yet':this._config.fixed_area?' · Room for this display':manual?' · Pinned on this device':''}${company?' · '+company:''}`;
+      this._sub.textContent = `${displayName}${usingFallback?resolved.away?'':' · Room not detected yet':this._config.fixed_area?' · Room for this display':manual?' · Pinned on this device':''}${company?' · '+company:''}`;
       const listKey=rooms.map(a=>a.area_id+':'+a.name).join('|');
       if (listKey !== this._listKey) {
         this._listKey=listKey; this._select.replaceChildren(); const opt=el('option','Choose a room');opt.value='';this._select.append(opt);
@@ -389,12 +401,12 @@
       this._status.style.display=shortcutsOnly || (usingFallback && !this._config.show_tracking_details) || (room && raw===room && !manual && !this._config.show_tracking_details)?'none':'';
       const configured=this._config.rooms?.[room];
       this._renderReadings(usingFallback || shortcutsOnly ? null : configured?.readings);
-      let cards=usingFallback && this._config.fallback_cards ? this._config.fallback_cards : configured?.cards || (room && this._config.auto_area_controls!==false ? this._areaEntities(room).slice(0,6).map(e=>({type:'tile',entity:e.entity_id})) : []);
+      let cards=awayView && this._config.away_rooms!==false ? this._roomLinks() : usingFallback && this._config.fallback_cards ? this._config.fallback_cards : configured?.cards || (room && this._config.auto_area_controls!==false ? this._areaEntities(room).slice(0,6).map(e=>({type:'tile',entity:e.entity_id})) : []);
       for(const rule of this._config.card_rules || []) {
         if (matchesRule(rule,h,person,room)) cards=rule.replace ? [...(rule.cards || [])] : [...cards,...(rule.cards || [])];
       }
       if(this._config.hide_unavailable)cards=cards.filter(c=>!c.entity || stateOK(h.states[c.entity]));
-      const groupTitle=usingFallback?this._config.fallback_title:configured?.title;
+      const groupTitle=awayView?null:usingFallback?this._config.fallback_title:configured?.title;
       if(groupTitle)cards=[{type:'heading',heading:groupTitle,heading_style:'subtitle'},...cards];
       if(usingFallback && resolved.away && this._config.show_still_on!==false) {
         const stillOn=this._stillOn(), limit=Math.max(1,Number(this._config.still_on_limit) || 8);

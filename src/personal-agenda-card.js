@@ -26,9 +26,20 @@
       const h = this._hass;
       return h?.user?.id ? Object.values(h.states).find(s => s.entity_id.startsWith('person.') && s.attributes.user_id === h.user.id) : undefined;
     }
+    // "Nico's list" / "nico's list" for person "nico"; matched on the friendly name.
+    _ownTodo(person) {
+      const name = String(person.attributes.friendly_name || '').trim().toLowerCase();
+      if (!name) return undefined;
+      return Object.values(this._hass.states).find(s => s.entity_id.startsWith('todo.') &&
+        new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[’']s (list|to-?do)$`, 'i').test(String(s.attributes.friendly_name || '').trim()))?.entity_id;
+    }
     _cards() {
       const c = this._config, h = this._hass, person = this._person();
-      const profile = person ? c.people?.[person.entity_id] : undefined;
+      let profile = person ? c.people?.[person.entity_id] : undefined;
+      const ownList = person && c.auto_todo !== false ? this._ownTodo(person) : undefined;
+      // A person with a "<Name>'s list" to-do counts as living here even without a profile.
+      if (!profile && ownList) profile = {};
+      if (profile && !profile.todo && ownList) profile = {...profile, todo: ownList};
       // People without a profile see nothing unless show_to_everyone is set (guests, kiosks).
       if (!profile && !c.show_to_everyone) return [];
       const parts = c.show || ['calendar', 'todo'];
@@ -44,7 +55,7 @@
         }
       }
       if (parts.includes('todo')) {
-        for (const todo of toList(profile?.todo)) {
+        for (const todo of [...toList(profile?.todo), ...toList(c.shared_todos)]) {
           const s = h.states[todo.entity];
           if (!s || BAD.has(s.state)) continue;
           if (c.hide_empty_todo !== false && Number(s.state) === 0) continue;

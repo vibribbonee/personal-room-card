@@ -24,6 +24,12 @@ The room comes from [Bermuda](https://github.com/agittins/bermuda) Bluetooth tra
 
 Two devices placed in different rooms count as "unsure", not as a vote.
 
+## Away mode
+
+When you're away, the room card stops pretending you're in a room: the header reads **Away · Home** (your Home Assistant location name, or `away_title`), and instead of one room's controls it lists **every room that has controls**, each with how many things are on there (*Bedroom · 2 on*). Rooms open their `rooms.<area>.path`, or `rooms_path`. Set `away_rooms: false` to show `fallback_cards` instead.
+
+When you're home but the card can't place you yet, it shows your `fallback_area` as *Your space · probably*.
+
 ## Who else is home
 
 The card knows who else lives in the house: every `person` linked to a login with at least one tracker. Kiosk or tablet logins can be left out with `household_exclude`, or you can list people explicitly with `household`.
@@ -68,6 +74,8 @@ calendar_media: "(min-width: 768px)"   # optional: only show the calendar part o
 calendar_card:                  # passed straight to calendar-card-pro
   compact_events_to_show: 3
 ```
+
+Each person's own to-do list is found automatically when it's called *"<Name>'s list"* (matching their `person` name), so a new housemate needs no config at all; `todo:` overrides it and `auto_todo: false` turns the lookup off. `shared_todos` lists to-dos everyone sees while they have open items, e.g. `shared_todos: [todo.shopping_list]`.
 
 Calendar entries take [Calendar Card Pro](https://github.com/alexpfau/calendar-card-pro) options (`label`, `accent_color`, …). Without Calendar Card Pro installed, it falls back to Home Assistant's built-in calendar card. People without a profile (a guest login, a kiosk) see nothing unless you set `show_to_everyone: true`, in which case they get the shared calendars. Set `hide_empty_todo: false` to always show the to-do list.
 
