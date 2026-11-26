@@ -23,9 +23,27 @@ The room comes from [Bermuda](https://github.com/agittins/bermuda) Bluetooth tra
 
 Two devices placed in different rooms count as "unsure", not as a vote.
 
-## When you're away
+## Who else is home
 
-When your `person` is away, the room card shows your `fallback_area` plus a **Still on at home** list: lights, fans, media players and climate that are still running, as tiles you can tap to switch off. When nothing is running it says *Everything's off at home*. Set `show_still_on: false` to hide it, or `still_on_limit` (default 8) to change how many it lists. Light groups are skipped so a whole-house group doesn't repeat its members, and so are the screens of voice/kiosk devices (an Echo Show or smart clock backlight). Paused media doesn't count as running. Add anything else to `still_on_exclude`. You can always pick a room by hand; that choice is stored in the browser only, never in Home Assistant.
+The card knows who else lives in the house: every `person` linked to a login with at least one tracker. Kiosk or tablet logins can be left out with `household_exclude`, or you can list people explicitly with `household`.
+
+- **At home**, the subtitle says who else is in and where, e.g. *byte in Kitchen* or *byte here too*.
+- **Away, and someone else is home**, the card says *byte is home · 3 things on*. Whatever is running is theirs, so it isn't offered for switching off.
+- **Away, and nobody else is home**, you get the **Still on at home** list: lights, fans, media and climate that are still running, as tiles you can tap to switch off, with an **All off** button (asks first). When nothing is running it says *Everything's off at home*.
+
+Someone whose tracker can't say where they are counts as unknown, never as away. The card says so ("Can't tell if byte is home") and the All off confirmation warns you.
+
+What counts as running: lights and fans that are on, media that is on or playing (paused doesn't count), and climate that isn't off. Light groups and the screens of voice/kiosk devices (an Echo Show or smart clock backlight) are skipped; add anything else to `still_on_exclude`.
+
+| Option | Default | |
+|---|---|---|
+| `show_household` | `true` | Who else is home |
+| `household_exclude` | `[]` | People to leave out, e.g. a kiosk login |
+| `household` | all with a login and a tracker | Explicit list of people |
+| `show_still_on` | `true` | The away view |
+| `show_all_off` | `true` | The All off button |
+| `still_on_limit` | `8` | Tiles shown before "…and N more" |
+| `still_on_exclude` | `[]` | Entities to never list |
 
 ## Install
 

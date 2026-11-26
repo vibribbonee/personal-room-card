@@ -118,10 +118,26 @@
       const h = this._hass;
       return Object.values(h.entities || {}).filter(e => (e.area_id || h.devices?.[e.device_id]?.area_id) === area && !e.hidden && !e.entity_category && CONTROL_DOMAINS.has(e.entity_id.split('.')[0]) && h.states[e.entity_id]).sort((a,b) => a.entity_id.localeCompare(b.entity_id));
     }
+    // Other people who live here: persons linked to a login with at least one tracker,
+    // minus household_exclude (kiosk/tablet logins). `known` is false while their
+    // tracker can't say, which is never treated as "not home".
+    _household(me) {
+      const h=this._hass, exclude=new Set(this._config.household_exclude || []);
+      const listed=this._config.household;
+      return Object.values(h.states)
+        .filter(s=>s.entity_id.startsWith('person.') && s.entity_id!==me?.entity_id && !exclude.has(s.entity_id))
+        .filter(s=>listed ? listed.includes(s.entity_id) : s.attributes.user_id && (s.attributes.device_trackers || []).length)
+        .map(s=>{
+          const home=s.state==='home', known=!BAD.has(s.state) || s.state==='not_home';
+          const area=home ? this._track(s).raw : null;
+          return {entity:s.entity_id,name:s.attributes.friendly_name || s.entity_id.split('.')[1],home,known,room:area ? h.areas?.[area]?.name : null};
+        });
+    }
+    _names(list) { const n=list.map(p=>p.name); return n.length<3 ? n.join(' and ') : `${n.slice(0,-1).join(', ')} and ${n.at(-1)}`; }
     // Lights, fans, media and climate that are still running, for the away view.
     // Groups are skipped so a whole-house light group doesn't repeat its members.
     _stillOn() {
-      const h=this._hass, limit=Math.max(1,Number(this._config.still_on_limit) || 8);
+      const h=this._hass;
       const running=s=>{const d=s.entity_id.split('.')[0];return d==='media_player'?['on','playing','buffering'].includes(s.state):d==='climate'?!['off',...BAD].includes(s.state):s.state==='on';};
       const exclude=new Set(this._config.still_on_exclude || []);
       // A "light" on a voice/kiosk device (e.g. an Echo Show or smart-clock screen) is its
@@ -132,7 +148,7 @@
         .filter(e=>!(e.entity_id.startsWith('light.') && kiosk.has(e.device_id)))
         .map(e=>h.states[e.entity_id]).filter(s=>s && running(s) && !Array.isArray(s.attributes.entity_id))
         .sort((a,b)=>(a.attributes.friendly_name || a.entity_id).localeCompare(b.attributes.friendly_name || b.entity_id))
-        .slice(0,limit).map(s=>s.entity_id);
+        .map(s=>s.entity_id);
     }
     _rooms() {
       const configured = this._config.rooms || {};
@@ -343,7 +359,14 @@
       this._pin.disabled=!room; this._pin.textContent=this._manual?'Pinned':'Pin';this._pin.setAttribute('aria-pressed',String(!!this._manual));
       const displayName=person?.attributes.friendly_name || h.user?.name || 'Home';
       this._title.textContent = name || `Hello, ${displayName}`;
-      this._sub.textContent = `${displayName}${usingFallback?resolved.away?' · Away from home':' · Room not detected yet':this._config.fixed_area?' · Room for this display':manual?' · Pinned on this device':''}`;
+      const household=this._config.show_household===false ? [] : this._household(person);
+      const othersHome=household.filter(p=>p.home);
+      let company='';
+      if(othersHome.length && !resolved.away) {
+        const here=othersHome.filter(p=>p.room && p.room===name), elsewhere=othersHome.filter(p=>!(p.room && p.room===name));
+        company=[here.length?`${this._names(here)} here too`:'',elsewhere.length?elsewhere.map(p=>p.room?`${p.name} in ${p.room}`:`${p.name} home`).join(', '):''].filter(Boolean).join(' · ');
+      }
+      this._sub.textContent = `${displayName}${usingFallback?resolved.away?' · Away from home':' · Room not detected yet':this._config.fixed_area?' · Room for this display':manual?' · Pinned on this device':''}${company?' · '+company:''}`;
       const listKey=rooms.map(a=>a.area_id+':'+a.name).join('|');
       if (listKey !== this._listKey) {
         this._listKey=listKey; this._select.replaceChildren(); const opt=el('option','Choose a room');opt.value='';this._select.append(opt);
@@ -374,10 +397,22 @@
       const groupTitle=usingFallback?this._config.fallback_title:configured?.title;
       if(groupTitle)cards=[{type:'heading',heading:groupTitle,heading_style:'subtitle'},...cards];
       if(usingFallback && resolved.away && this._config.show_still_on!==false) {
-        const stillOn=this._stillOn();
-        cards=stillOn.length
-          ? [{type:'heading',heading:'Still on at home',heading_style:'subtitle',icon:'mdi:home-lightning-bolt-outline'},...stillOn.map(entity=>({type:'tile',entity,grid_options:{columns:6}})),...cards]
-          : [{type:'heading',heading:"Everything's off at home",heading_style:'subtitle',icon:'mdi:home-check-outline'},...cards];
+        const stillOn=this._stillOn(), limit=Math.max(1,Number(this._config.still_on_limit) || 8);
+        const unsure=household.filter(p=>!p.known);
+        const things=n=>`${n} thing${n===1?'':'s'} on`;
+        if(othersHome.length) {
+          // Someone else is home: what's on is theirs, so report it without offering to switch it off.
+          cards=[{type:'heading',heading:`${this._names(othersHome)} ${othersHome.length===1?'is':'are'} home${stillOn.length?' · '+things(stillOn.length):''}`,heading_style:'subtitle',icon:'mdi:account-group-outline'},...cards];
+        } else if(stillOn.length) {
+          const heading={type:'heading',heading:'Still on at home',heading_style:'subtitle',icon:'mdi:home-lightning-bolt-outline'};
+          if(this._config.show_all_off!==false) heading.badges=[{type:'button',icon:'mdi:power',text:'All off',tap_action:{action:'perform-action',perform_action:'homeassistant.turn_off',target:{entity_id:stillOn},confirmation:{text:`Turn off ${things(stillOn.length).replace(' on','')} at home?${unsure.length?` ${this._names(unsure)}'s location is unknown.`:''}`}}}];
+          const tiles=stillOn.slice(0,limit).map(entity=>({type:'tile',entity}));
+          if(stillOn.length>limit) tiles.push({type:'markdown',text_only:true,content:`…and ${stillOn.length-limit} more`});
+          cards=[heading,...tiles,...cards];
+        } else {
+          cards=[{type:'heading',heading:"Everything's off at home",heading_style:'subtitle',icon:'mdi:home-check-outline'},...cards];
+        }
+        if(unsure.length && !othersHome.length) cards.splice(1,0,{type:'markdown',text_only:true,content:`<small>Can't tell if ${this._names(unsure)} ${unsure.length===1?'is':'are'} home.</small>`});
       }
       const readings = usingFallback ? null : roomReadingsCard(configured?.readings);
       if(readings) cards = [readings,...cards];
@@ -555,7 +590,10 @@
         ['learn_shortcuts','Learn from shortcut taps on this device',true],
         ['show_tracking_details','Show tracking details below the room name',false],
         ['show_room_navigation','Show a Browse rooms button',false],
-        ['show_room_picker','Show room selection, Auto and Pin (shared displays)',false]
+        ['show_room_picker','Show room selection, Auto and Pin (shared displays)',false],
+        ['show_household','Show who else is home',true],
+        ['show_still_on','When away: show what is still on at home',true],
+        ['show_all_off','When away and nobody else is home: offer All off',true]
       ];
       if(this._config.type==='custom:personal-shortcuts-card')options.unshift(['follow_room_timing','Follow the room card’s switching timings',true]);
       for(const [name,label,fallback] of options) {const row=el('label');const check=el('input');check.type='checkbox';check.disabled=followsTiming && ['stabilize_room','hold_last_room','pause_on_interaction'].includes(name);check.checked=followsTiming && linkedTiming && ['stabilize_room','hold_last_room','pause_on_interaction'].includes(name)?linkedTiming[['stabilize_room','hold_last_room','pause_on_interaction'].indexOf(name)]>0:this._config[name]===undefined?fallback:!!this._config[name];check.addEventListener('change',()=>this._change(name,check.checked));row.append(check,el('span',label));panel.append(row);}
