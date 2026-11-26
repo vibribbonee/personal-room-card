@@ -164,6 +164,8 @@
         const id = person.entity_id, prof = c.people?.[id] || {};
         const box = document.createElement('div'); box.className = 'person';
         const title = document.createElement('h4'); title.textContent = person.attributes.friendly_name || id; box.append(title);
+        const facts = [person.attributes.pronouns || [person.attributes.pronoun1, person.attributes.pronoun2].filter(Boolean).join('/'), person.attributes.birthday ? `birthday ${person.attributes.birthday}` : ''].filter(Boolean);
+        if (facts.length) { const f = document.createElement('p'); f.textContent = facts.join(' · '); box.append(f); }
         const auto = c.auto_todo !== false && !prof.todo ? ownTodo(h, person) : undefined;
         if (auto) { const hint = document.createElement('p'); hint.textContent = `To-do found automatically: ${h.states[auto]?.attributes.friendly_name || auto}`; box.append(hint); }
         box.append(this._form(

@@ -130,8 +130,17 @@
         .map(s=>{
           const home=s.state==='home', known=!BAD.has(s.state) || s.state==='not_home';
           const area=home ? this._track(s).raw : null;
-          return {entity:s.entity_id,name:s.attributes.friendly_name || s.entity_id.split('.')[1],home,known,room:area ? h.areas?.[area]?.name : null};
+          const name=(s.attributes.friendly_name || s.entity_id.split('.')[1])+(this._birthdayToday(s.attributes.birthday)?' 🎂':'');
+          return {entity:s.entity_id,name,home,known,room:area ? h.areas?.[area]?.name : null};
         });
+    }
+    // Birthday attribute is day-month with an optional year ("16-02-2001", "06-04").
+    _birthdayToday(value) {
+      const m=String(value || '').trim().match(/^(\d{1,2})[-/.](\d{1,2})(?:[-/.]\d{4})?$/);
+      if(!m)return false;
+      const order=this._config.date_order==='MDY', day=+(order?m[2]:m[1]), month=+(order?m[1]:m[2]);
+      const parts=new Intl.DateTimeFormat('en-CA',{timeZone:this._hass?.config?.time_zone,month:'numeric',day:'numeric'}).formatToParts(new Date());
+      return +parts.find(p=>p.type==='day').value===day && +parts.find(p=>p.type==='month').value===month;
     }
     _names(list) { const n=list.map(p=>p.name); return n.length<3 ? n.join(' and ') : `${n.slice(0,-1).join(', ')} and ${n.at(-1)}`; }
     // One shortcut per room that has controls, with how many things are running there.

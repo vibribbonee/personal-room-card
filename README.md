@@ -35,7 +35,7 @@ When you're home but the card can't place you yet, it shows your `fallback_area`
 
 The card knows who else lives in the house: every `person` linked to a login with at least one tracker. Kiosk or tablet logins can be left out with `household_exclude`, or you can list people explicitly with `household`.
 
-- **At home**, the subtitle says who else is in and where, e.g. *byte in Kitchen* or *byte here too*.
+- **At home**, the subtitle says who else is in and where, e.g. *byte in Kitchen* or *byte here too* (with a 🎂 on their birthday).
 - **Away, and someone else is home**, the card says *byte is home · 3 things on*. Whatever is running is theirs, so it isn't offered for switching off.
 - **Away, and nobody else is home**, you get the **Still on at home** list: lights, fans, media and climate that are still running, as tiles you can tap to switch off, with an **All off** button (asks first). When nothing is running it says *Everything's off at home*.
 
