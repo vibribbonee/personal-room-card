@@ -77,6 +77,8 @@ calendar_card:                  # passed straight to calendar-card-pro
 
 Each person's own to-do list is found automatically when it's called *"<Name>'s list"* (matching their `person` name), so a new housemate needs no config at all; `todo:` overrides it and `auto_todo: false` turns the lookup off. `shared_todos` lists to-dos everyone sees while they have open items, e.g. `shared_todos: [todo.shopping_list]`.
 
+Everything above can be set from the card's visual editor: the shared calendars and lists, and a block per person for their own calendars and to-do list. Labels and colours you set in YAML are kept when you change calendars in the editor.
+
 Calendar entries take [Calendar Card Pro](https://github.com/alexpfau/calendar-card-pro) options (`label`, `accent_color`, …). Without Calendar Card Pro installed, it falls back to Home Assistant's built-in calendar card. People without a profile (a guest login, a kiosk) see nothing unless you set `show_to_everyone: true`, in which case they get the shared calendars. Set `hide_empty_todo: false` to always show the to-do list.
 
 ## Install
@@ -103,7 +105,7 @@ rooms:
     shortcuts: []           # pinned shortcuts for this room, optional
 ```
 
-All options can be set from the visual editor.
+All options can be set from the visual editor, including the household and away settings.
 
 ## Development
 

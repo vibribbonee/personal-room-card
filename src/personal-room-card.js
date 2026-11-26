@@ -466,7 +466,7 @@
   class PersonalRoomEditor extends HTMLElement {
     constructor() {super();this.attachShadow({mode:'open'});}
     setConfig(config) {this._config=config;this._render();}
-    set hass(hass) {this._hass=hass;for(const editor of this._editors || [])editor.hass=hass;if(this._roomPreview)this._roomPreview.hass=hass;if(this._temperatureForm)this._temperatureForm.hass=hass;if(this._readingsForm)this._readingsForm.hass=hass;this._render();}
+    set hass(hass) {this._hass=hass;for(const editor of this._editors || [])editor.hass=hass;if(this._roomPreview)this._roomPreview.hass=hass;if(this._temperatureForm)this._temperatureForm.hass=hass;if(this._readingsForm)this._readingsForm.hass=hass;if(this._householdForm)this._householdForm.hass=hass;this._render();}
     set lovelace(value) {this._lovelace=value;for(const editor of this._editors || [])editor.lovelace=value;}
     _change(key,value) {this._config={...this._config,[key]:value};this.dispatchEvent(new CustomEvent('config-changed',{detail:{config:this._config},bubbles:true,composed:true}));}
     _editorKey() {return JSON.stringify([this._config,Object.values(this._hass?.areas || {}).map(a=>[a.area_id,a.name]),this._selectedRoom]);}
@@ -628,8 +628,36 @@
       panel.append(el('h3','Default room when away or location is unknown'));
       const fallbackSelect=el('select');fallbackSelect.setAttribute('aria-label','Default room');const noFallback=el('option','No default room');noFallback.value='';fallbackSelect.append(noFallback);
       for(const area of areas) {const o=el('option',area.name);o.value=area.area_id;fallbackSelect.append(o);}fallbackSelect.value=this._config.fallback_area || '';fallbackSelect.addEventListener('change',()=>this._change('fallback_area',fallbackSelect.value || null));panel.append(fallbackSelect);
+      this._householdSettings(panel);
       panel.append(el('p','Advanced YAML: card_rules can match people and rooms. Add a native Conditional card inside either for time, state and other conditions. These display rules do not change Home Assistant permissions.'));
       this.shadowRoot.append(panel);this._key=this._editorKey();
+    }
+    _householdSettings(panel) {
+      panel.append(el('h3','Household & away'));
+      panel.append(el('p','Who counts as living here, and what the card shows while you are away. Everyone with a login and a tracker counts unless you leave them out here.'));
+      const form=document.createElement('ha-form');this._householdForm=form;form.hass=this._hass;
+      form.schema=[
+        {name:'household_exclude',selector:{entity:{domain:'person',multiple:true}}},
+        {name:'away_title',selector:{text:{}}},
+        {name:'away_rooms',selector:{boolean:{}}},
+        {name:'still_on_limit',selector:{number:{min:1,max:30,step:1,mode:'box'}}},
+        {name:'still_on_exclude',selector:{entity:{domain:['light','fan','media_player','climate'],multiple:true}}}
+      ];
+      const labels={household_exclude:'Not part of the household (kiosk or tablet logins)',away_title:'Title while away (default: your home name)',away_rooms:'While away, list every room with controls',still_on_limit:'"Still on at home": tiles before "…and N more"',still_on_exclude:'Never list these as still on'};
+      form.computeLabel=field=>labels[field.name] || field.name;
+      const c=this._config;
+      form.data={household_exclude:c.household_exclude || [],away_title:c.away_title || '',away_rooms:c.away_rooms!==false,still_on_limit:c.still_on_limit || 8,still_on_exclude:c.still_on_exclude || []};
+      form.addEventListener('value-changed',event=>{
+        const v=event.detail.value;if(!v || typeof v!=='object')return;event.stopPropagation();
+        const next={...this._config};
+        for(const key of ['household_exclude','still_on_exclude']) {if(v[key]?.length)next[key]=v[key];else delete next[key];}
+        if(v.away_title)next.away_title=v.away_title;else delete next.away_title;
+        if(v.away_rooms===false)next.away_rooms=false;else delete next.away_rooms;
+        if(v.still_on_limit && v.still_on_limit!==8)next.still_on_limit=v.still_on_limit;else delete next.still_on_limit;
+        this._config=next;form.data=v;this._key=this._editorKey();
+        this.dispatchEvent(new CustomEvent('config-changed',{detail:{config:this._config},bubbles:true,composed:true}));
+      });
+      panel.append(form);
     }
   }
   if (!customElements.get('personal-room-card-editor')) customElements.define('personal-room-card-editor',PersonalRoomEditor);
