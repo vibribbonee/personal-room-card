@@ -122,9 +122,14 @@
     // Groups are skipped so a whole-house light group doesn't repeat its members.
     _stillOn() {
       const h=this._hass, limit=Math.max(1,Number(this._config.still_on_limit) || 8);
-      const running=s=>{const d=s.entity_id.split('.')[0];return d==='media_player'?['on','playing','paused','buffering'].includes(s.state):d==='climate'?!['off',...BAD].includes(s.state):s.state==='on';};
+      const running=s=>{const d=s.entity_id.split('.')[0];return d==='media_player'?['on','playing','buffering'].includes(s.state):d==='climate'?!['off',...BAD].includes(s.state):s.state==='on';};
+      const exclude=new Set(this._config.still_on_exclude || []);
+      // A "light" on a voice/kiosk device (e.g. an Echo Show or smart-clock screen) is its
+      // display backlight, which is meant to stay on, not a room light someone forgot.
+      const kiosk=new Set(Object.values(h.entities || {}).filter(e=>e.entity_id.startsWith('assist_satellite.') && e.device_id).map(e=>e.device_id));
       return Object.values(h.entities || {})
-        .filter(e=>['light','fan','media_player','climate'].includes(e.entity_id.split('.')[0]) && !e.hidden && !e.entity_category)
+        .filter(e=>['light','fan','media_player','climate'].includes(e.entity_id.split('.')[0]) && !e.hidden && !e.entity_category && !exclude.has(e.entity_id))
+        .filter(e=>!(e.entity_id.startsWith('light.') && kiosk.has(e.device_id)))
         .map(e=>h.states[e.entity_id]).filter(s=>s && running(s) && !Array.isArray(s.attributes.entity_id))
         .sort((a,b)=>(a.attributes.friendly_name || a.entity_id).localeCompare(b.attributes.friendly_name || b.entity_id))
         .slice(0,limit).map(s=>s.entity_id);
