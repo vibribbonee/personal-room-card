@@ -591,6 +591,11 @@
       if(alarmId) {
         const alarm=h.states[alarmId], timestamp=Date.parse(alarm?.state), future=Number.isFinite(timestamp) && timestamp>Date.now();
         let text='Alarm not reporting',title='The phone has not supplied its next alarm. This does not mean no alarm is set.';
+        // The Android app reports next_alarm as unavailable when no alarm is set. If the same
+        // phone reported anything else in the last 2 hours, it is online: read that as "no alarm".
+        const alarmDevice=h.entities?.[alarmId]?.device_id;
+        const phoneOnline=!!alarmDevice && own.some(x=>x.entity_id!==alarmId && h.entities?.[x.entity_id]?.device_id===alarmDevice && stateOK(x) && Date.now()-Date.parse(x.last_updated)<2*3600000);
+        if(alarm?.state==='unavailable' && phoneOnline) {text='No alarm set';title='Your phone is online and has no upcoming alarm.';}
         if(future) {
           const locale=h.locale?.language || h.language || 'en-GB', zone=h.config?.time_zone;
           const fmt=new Intl.DateTimeFormat(locale,{timeZone:zone,weekday:'short',hour:'2-digit',minute:'2-digit'});
