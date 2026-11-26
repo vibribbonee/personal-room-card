@@ -47,7 +47,10 @@
       if (raw && connected) {
         if (raw !== this.candidate) { this.candidate = raw; this.since = now; }
         if (raw === this.room) this.lastSeen = now;
-        if (now - this.since >= this.dwell && now - this.touched >= this.interaction) { this.room = raw; this.lastSeen = now; }
+        // The dwell stops flicker *between* rooms. With no room yet (arriving, first load)
+        // there is nothing to flicker from, so a short confirmation is enough.
+        const dwell = this.room ? this.dwell : Math.min(this.dwell, 5000);
+        if (now - this.since >= dwell && now - this.touched >= this.interaction) { this.room = raw; this.lastSeen = now; }
       } else { this.candidate = null; this.since = now; }
       if ((!raw || !connected) && now - this.lastSeen > this.grace && now - this.touched >= this.interaction) this.room = null;
       return this.room;
@@ -369,8 +372,10 @@
       if (this._manual && !h.areas?.[this._manual] && rooms.length) this._saveRoom(null);
       const manual=this._config.fixed_area || (this._config.show_room_picker?this._manual:null);
       const raw=this._config.require_home && person?.state!=='home'?null:track.raw;
-      // An already-stable server signal need not make every page visit wait again.
-      if(raw && !this._stability.room && !this._stability.candidate && !this._stability.lastSeen && track.stableFor>=this._stability.dwell) {this._stability.candidate=raw;this._stability.since=now-this._stability.dwell;}
+      // The server knows how long the room signal has been steady. If it has already held for
+      // the dwell time, don't make this page wait again (first load, or the app resuming from
+      // the background, where the local timer was paused or reset).
+      if(raw && raw!==this._stability.room && track.stableFor>=this._stability.dwell && this._stability.since>now-this._stability.dwell) {this._stability.candidate=raw;this._stability.since=now-this._stability.dwell;}
       const detected=this._stability.update(raw,now,manual,h.connected !== false);
       const resolved=this._resolveRoom(person,detected,manual), room=resolved.room, usingFallback=resolved.fallback, name=h.areas?.[room]?.name;
       this.shadowRoot.querySelector('.caption').textContent=(shortcutsOnly && name?name+' · ':'')+(usingFallback?'Default room shortcuts':this._config.temperature_suggestions?.[room]?.enabled?'Suggestions follow room conditions, weekday and time of day.':this._config.learn_shortcuts===false?'Suggested for this time of day.':'Suggestions adapt to the weekday and time of day from shortcuts you use on this device.');
