@@ -1,5 +1,10 @@
-/* Personal Room, v2. Self-contained HA custom card; no network dependencies. */
+/* Personal Room. Self-contained HA custom cards; no network dependencies. */
 (() => {
+  const CARD_VERSION = '1.0.0';
+  if (!window.__personalRoomCardLogged) {
+    window.__personalRoomCardLogged = true;
+    console.info(`%c PERSONAL-ROOM-CARD %c ${CARD_VERSION} `, 'color:#fff;background:#3b82f6;font-weight:700', 'color:#3b82f6;background:#fff');
+  }
   const BAD = new Set(['unknown', 'unavailable', 'not_home', '']);
   const CONTROL_DOMAINS = new Set(['light', 'climate', 'media_player', 'fan', 'cover']);
   const ROOM_CONTEXTS = new Map();
@@ -733,9 +738,11 @@
   if (!customElements.get('personal-shortcuts-card')) customElements.define('personal-shortcuts-card',PersonalShortcutsCard);
   if (!customElements.get('personal-room-card')) customElements.define('personal-room-card',PersonalRoomCard);
   window.customCards=window.customCards || [];
-  window.customCards.push({type:'personal-shortcuts-card',name:'Personal Shortcuts',description:'Separate suggestions for the signed-in person and room; optional learning.'});
-  window.customCards.push({type:'personal-status-pills',name:'Personal Status Pills',description:'Device battery, charging and next alarm for the signed-in person.'});
-  window.customCards.push({type:'personal-room-card',name:'Personal Room',description:'Room controls for the signed-in person, with stable tracking and a local room pin.'});
+  for (const card of [
+    {type:'personal-shortcuts-card',name:'Personal Shortcuts',description:'Separate suggestions for the signed-in person and room; optional learning.'},
+    {type:'personal-status-pills',name:'Personal Status Pills',description:'Device battery, charging and next alarm for the signed-in person.'},
+    {type:'personal-room-card',name:'Personal Room',description:'Room controls for the signed-in person, with stable tracking and a local room pin.'}
+  ]) if (!window.customCards.some(c => c.type === card.type)) window.customCards.push(card);
 })();
 
 /* Personal commute card: server-side NS entities; no API credentials in the browser. */
@@ -865,7 +872,7 @@ class PersonalCommuteEditor extends HTMLElement {
 }
 if(!customElements.get('personal-commute-card'))customElements.define('personal-commute-card',PersonalCommuteCard);
 if(!customElements.get('personal-commute-card-editor'))customElements.define('personal-commute-card-editor',PersonalCommuteEditor);
-window.customCards=window.customCards || [];window.customCards.push({type:'personal-commute-card',name:'Personal commute',description:'Your trains, leave-by time and personal station travel time',preview:true});
+window.customCards=window.customCards || [];if(!window.customCards.some(c=>c.type==='personal-commute-card'))window.customCards.push({type:'personal-commute-card',name:'Personal commute',description:'Your trains, leave-by time and personal station travel time',preview:true});
 
 /* Personal agenda card: the signed-in person's calendars and to-do list, from one config. */
 (() => {

@@ -132,4 +132,4 @@ All options can be set from the visual editor, including the household and away 
 
 ## Development
 
-The two cards live in `src/`. Run `./build.sh` to rebuild `dist/personal-room-card.js`.
+The cards live in `src/`, one file per card family. Run `./build.sh` to rebuild `dist/personal-room-card.js`, and commit both: CI fails when `dist` is out of date. To release, bump `CARD_VERSION` in `src/personal-room-card.js`, rebuild, and publish a GitHub release `vX.Y.Z`; the Marketplace installs from releases. The browser console shows the loaded version.

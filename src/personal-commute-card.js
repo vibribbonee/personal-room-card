@@ -125,4 +125,4 @@ class PersonalCommuteEditor extends HTMLElement {
 }
 if(!customElements.get('personal-commute-card'))customElements.define('personal-commute-card',PersonalCommuteCard);
 if(!customElements.get('personal-commute-card-editor'))customElements.define('personal-commute-card-editor',PersonalCommuteEditor);
-window.customCards=window.customCards || [];window.customCards.push({type:'personal-commute-card',name:'Personal commute',description:'Your trains, leave-by time and personal station travel time',preview:true});
+window.customCards=window.customCards || [];if(!window.customCards.some(c=>c.type==='personal-commute-card'))window.customCards.push({type:'personal-commute-card',name:'Personal commute',description:'Your trains, leave-by time and personal station travel time',preview:true});
